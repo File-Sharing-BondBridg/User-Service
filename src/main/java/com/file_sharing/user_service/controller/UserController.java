@@ -1,5 +1,8 @@
 package com.file_sharing.user_service.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import com.file_sharing.user_service.repository.UserRepository;
 import com.file_sharing.user_service.model.User;
@@ -19,7 +22,14 @@ public class UserController {
     public User createOrGetUser(@RequestBody Map<String, String> data) {
         return repo.findByEmail(data.get("email"))
                 .orElseGet(() -> repo.save(
-                        new User(null, data.get("email"), data.get("name"), "keycloak")
+                        new User(data.get("email"), data.get("name"), "keycloak")
                 ));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getSubject();
+        String email = jwt.getClaim("email");
+        return ResponseEntity.ok(Map.of("id", userId, "email", email));
     }
 }

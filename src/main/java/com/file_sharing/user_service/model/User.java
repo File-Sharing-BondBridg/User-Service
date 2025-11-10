@@ -19,5 +19,10 @@ public class User {
     private String email;
     private String name;
     private String provider;
-}
 
+    public User(String email, String name, String provider) {
+        this.email = email;
+        this.name = name;
+        this.provider = provider;
+    }
+}
