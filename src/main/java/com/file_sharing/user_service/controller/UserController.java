@@ -32,4 +32,14 @@ public class UserController {
         String email = jwt.getClaim("email");
         return ResponseEntity.ok(Map.of("id", userId, "email", email));
     }
+
+    //todo: implement the functionality
+    @PostMapping("/sync")
+    public User syncUser(@AuthenticationPrincipal Jwt jwt) {
+        String email = jwt.getClaim("email");
+        String name = jwt.getClaim("preferred_username");
+
+        return repo.findByEmail(email)
+                .orElseGet(() -> repo.save(new User(email, name, "keycloak")));
+    }
 }
