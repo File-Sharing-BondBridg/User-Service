@@ -19,11 +19,14 @@ public class UserController {
     }
 
     @PostMapping
-    public User createOrGetUser(@RequestBody Map<String, String> data) {
-        return repo.findByEmail(data.get("email"))
+    public ResponseEntity<User> createOrGetUser(@RequestBody Map<String, String> data) {
+        return ResponseEntity.ok(
+            repo.findByEmail(data.get("email"))
                 .orElseGet(() -> repo.save(
                         new User(data.get("email"), data.get("name"), "keycloak")
-                ));
+                    )
+                )
+        );
     }
 
     @GetMapping("/me")
@@ -33,13 +36,24 @@ public class UserController {
         return ResponseEntity.ok(Map.of("id", userId, "email", email));
     }
 
-    //todo: implement the functionality
     @PostMapping("/sync")
-    public User syncUser(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<?> syncUser(@AuthenticationPrincipal Jwt jwt) {
         String email = jwt.getClaim("email");
         String name = jwt.getClaim("preferred_username");
 
-        return repo.findByEmail(email)
+        if (email == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email missing in token"));
+        }
+
+        User user = repo.findByEmail(email)
                 .orElseGet(() -> repo.save(new User(email, name, "keycloak")));
+
+        return ResponseEntity.ok(Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "name", user.getName(),
+                "provider", user.getProvider()
+        ));
     }
+
 }
