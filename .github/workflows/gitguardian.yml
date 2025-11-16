@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0
 
       - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@v1.27.0
+        uses: GitGuardian/ggshield-action@v2
         with:
           args: secret scan ci
         env:
