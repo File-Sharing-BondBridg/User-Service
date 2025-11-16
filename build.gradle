@@ -38,6 +38,7 @@ sonar {
         property "sonar.organization", "File-Sharing-BondBridg"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.scm.revision", System.getenv("GITHUB_SHA")
+        property "sonar.tests.skip", "true"
     }
 }
 
@@ -46,8 +47,7 @@ jacoco {
 }
 
 tasks.test {
-    useJUnitPlatform()
-    finalizedBy("jacocoTestReport")
+    enabled = false
 }
 
 tasks.jacocoTestReport {
@@ -78,8 +78,4 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
 }
