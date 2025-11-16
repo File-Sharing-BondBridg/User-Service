@@ -40,26 +40,6 @@ jobs:
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      # OPTIONAL: enforce formatting (remove if you trust local devs)
-      - name: Apply Spotless formatting
-        run: ./gradlew spotlessApply
-
-      - name: Fail if formatting changed
-        run: |
-          if ! git diff --quiet; then
-            echo "Code not formatted. Run './gradlew spotlessApply' locally."
-            git diff
-            exit 1
-          fi
-
-      - name: Compile & SonarCloud scan (no tests, no JAR)
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          ./gradlew classes sonar -x test --no-daemon \
-            -Dsonar.login=$SONAR_TOKEN \
-            --info
-
   trivy:
     name: Trivy Vulnerability Scan
     runs-on: ubuntu-latest

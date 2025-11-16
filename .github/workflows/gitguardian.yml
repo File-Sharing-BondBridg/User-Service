@@ -1,5 +1,6 @@
 name: GitGuardian Secret Scan
 
+#new test
 on:
   push:
     branches: [ main ]
