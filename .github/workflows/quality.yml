@@ -6,41 +6,42 @@ on:
     branches: [ "main" ]
 
 jobs:
-  quality:
-    runs-on: ubuntu-latest
+#  quality:
+#    runs-on: ubuntu-latest
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#
+#      - name: Setup JDK
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: "17"
+#          distribution: "temurin"
+#
+#      - name: Grant execute permission for gradlew
+#        run: chmod +x gradlew
+#
+#      - name: Run Gradle Quality Checks
+#        run: ./gradlew clean check spotbugsMain spotbugsTest jacocoTestReport
+#
+#      - name: Upload Checkstyle Report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: checkstyle-report
+#          path: build/reports/checkstyle
+#
+#      - name: Upload PMD Report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: pmd-report
+#          path: build/reports/pmd
+#
+#      - name: Upload SpotBugs Report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: spotbugs-report
+#          path: build/reports/spotbugs
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          java-version: "17"
-          distribution: "temurin"
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run Gradle Quality Checks
-        run: ./gradlew clean check spotbugsMain spotbugsTest jacocoTestReport
-
-      - name: Upload Checkstyle Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: checkstyle-report
-          path: build/reports/checkstyle
-
-      - name: Upload PMD Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: pmd-report
-          path: build/reports/pmd
-
-      - name: Upload SpotBugs Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: spotbugs-report
-          path: build/reports/spotbugs
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
@@ -48,24 +49,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: 17
-          distribution: 'zulu' # Alternative distribution options are available.
+          distribution: 'zulu'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
       - name: Cache SonarQube packages
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
           path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle
+
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

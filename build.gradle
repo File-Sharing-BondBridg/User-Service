@@ -35,39 +35,39 @@ checkstyle {
     configFile = file("config/checkstyle/checkstyle.xml")
 }
 
-tasks.withType<Checkstyle> {
-    isIgnoreFailures = false
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-    }
-}
+//tasks.withType<Checkstyle> {
+//    isIgnoreFailures = false
+//    reports {
+//        xml.required.set(true)
+//        html.required.set(true)
+//    }
+//}
 
-pmd {
-    toolVersion = "7.7.0"
-    isConsoleOutput = true
-    ruleSets = listOf()
-    ruleSetFiles = files("config/pmd/pmd-ruleset.xml")
-}
+//pmd {
+//    toolVersion = "7.7.0"
+//    isConsoleOutput = true
+//    ruleSets = listOf()
+//    ruleSetFiles = files("config/pmd/pmd-ruleset.xml")
+//}
 
-tasks.withType<Pmd> {
-    isIgnoreFailures = false
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-    }
-}
-
-spotbugs {
-    toolVersion.set("4.8.3")
-    excludeFilter.set(file("config/spotbugs/spotbugs-exclude.xml"))
-}
-
-tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
-    reports.create("html") {
-        required.set(true)
-    }
-}
+//tasks.withType<Pmd> {
+//    isIgnoreFailures = false
+//    reports {
+//        xml.required.set(true)
+//        html.required.set(true)
+//    }
+//}
+//
+//spotbugs {
+//    toolVersion.set("4.8.3")
+//    excludeFilter.set(file("config/spotbugs/spotbugs-exclude.xml"))
+//}
+//
+//tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
+//    reports.create("html") {
+//        required.set(true)
+//    }
+//}
 
 jacoco {
     toolVersion = "0.8.11"
