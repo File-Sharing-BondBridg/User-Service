@@ -1,0 +1,55 @@
+name: Code Quality & Security
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Gradle Quality Checks
+        run: ./gradlew clean check spotbugsMain spotbugsTest jacocoTestReport
+
+      - name: Upload Checkstyle Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-report
+          path: build/reports/checkstyle
+
+      - name: Upload PMD Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmd-report
+          path: build/reports/pmd
+
+      - name: Upload SpotBugs Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-report
+          path: build/reports/spotbugs
+
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
