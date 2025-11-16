@@ -9,6 +9,8 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -16,7 +18,5 @@ jobs:
 
       - name: GitGuardian scan
         uses: GitGuardian/ggshield-action@v1.27.0
-        with:
-          args: secret scan --ci
         env:
           GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
