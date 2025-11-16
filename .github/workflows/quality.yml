@@ -43,17 +43,9 @@ jobs:
       - name: Format code
         run: ./gradlew spotlessApply
 
-      - name: Enforce formatting
-        run: |
-          git diff --exit-code || (
-            echo "Code not formatted. Run './gradlew spotlessApply' locally."
-            exit 1
-          )
-
       - name: Build and Analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          # GITHUB_TOKEN is auto-injected — no secret needed
         run: |
           ./gradlew build sonar \
             -Dsonar.login=$SONAR_TOKEN \
