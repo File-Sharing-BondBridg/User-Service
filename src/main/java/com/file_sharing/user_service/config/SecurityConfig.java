@@ -4,6 +4,7 @@ import java.util.Arrays;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -15,15 +16,17 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .csrf()
-        .disable()
+        .csrf(AbstractHttpConfigurer::disable) // Fixed CSRF
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers("/users/sync", "/users/me")
                     .authenticated()
                     .anyRequest()
                     .permitAll())
-        .oauth2ResourceServer(oauth2 -> oauth2.jwt());
+        .oauth2ResourceServer(
+            oauth2 -> oauth2.jwt(jwt -> {}) // Fixed JWT configuration
+            );
+
     return http.build();
   }
 

@@ -34,8 +34,8 @@ spotless {
 
 sonar {
     properties {
-        property "sonar.projectKey", "File-Sharing-BondBridg_User-Service"
-        property "sonar.organization", "File-Sharing-BondBridg"
+        property "sonar.projectKey", "file-sharing-bondbridg_user-service"
+        property "sonar.organization", "file-sharing-bondbridg"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.scm.revision", System.getenv("GITHUB_SHA")
         property "sonar.tests.skip", "true"

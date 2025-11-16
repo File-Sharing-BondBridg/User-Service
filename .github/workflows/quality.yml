@@ -2,9 +2,9 @@ name: Code Quality & Security
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
   push:
-    branches: [ "main" ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -19,9 +19,9 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: 17
-          distribution: 'zulu'
+          distribution: zulu
 
-      - name: Grant execute permission
+      - name: Grant gradlew exec permission
         run: chmod +x gradlew
 
       - name: Cache Gradle
@@ -33,33 +33,42 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Cache SonarCloud
+      - name: Cache SonarCloud scanner
         uses: actions/cache@v4
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
 
-      - name: Format code
+      # OPTIONAL: enforce formatting (remove if you trust local devs)
+      - name: Apply Spotless formatting
         run: ./gradlew spotlessApply
 
-      - name: Build and Analyze
+      - name: Fail if formatting changed
+        run: |
+          if ! git diff --quiet; then
+            echo "Code not formatted. Run './gradlew spotlessApply' locally."
+            git diff
+            exit 1
+          fi
+
+      - name: Compile & SonarCloud scan (no tests, no JAR)
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          ./gradlew build -x test sonar \
+          ./gradlew classes sonar -x test --no-daemon \
             -Dsonar.login=$SONAR_TOKEN \
             --info
 
-  trivy-scan:
-    name: Trivy Security Scan
+  trivy:
+    name: Trivy Vulnerability Scan
     runs-on: ubuntu-latest
     needs: build
     steps:
       - uses: actions/checkout@v4
       - uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          severity: 'HIGH,CRITICAL'
+          scan-type: fs
+          severity: HIGH,CRITICAL
           exit-code: '1'
           ignore-unfixed: true

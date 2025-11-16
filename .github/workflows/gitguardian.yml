@@ -1,20 +1,21 @@
 name: GitGuardian Secret Scan
 
-#new try
 on:
   push:
+    branches: [ main ]
   pull_request:
 
 jobs:
   scan:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@v1
+        uses: GitGuardian/ggshield-action@v1.27.0
+        with:
+          args: secret scan ci
         env:
-          GITGUARDIAN_API_KEY: ${{ secrets.GGSHIELD_API_KEY }}
-          run: |
-            ggshield secret scan ci
+          GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}

@@ -6,43 +6,54 @@ on:
 jobs:
   review:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Dependencies
-        run: |
-          pip install torch transformers
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
 
-      - name: Generate Diff
+      - name: Install tiny model deps
         run: |
-          git fetch origin ${{ github.base_ref }}
-          git diff origin/${{ github.base_ref }}... > diff.txt
+          pip install --quiet torch==2.3.0 transformers==4.44.0
 
-      - name: Run AI Review
+      - name: Generate diff
         run: |
-          python <<EOF
-  from transformers import AutoTokenizer, AutoModelForCausalLM
-  tokenizer = AutoTokenizer.from_pretrained("HuggingFaceH4/zephyr-7b-beta")
-  model = AutoModelForCausalLM.from_pretrained("HuggingFaceH4/zephyr-7b-beta")
-  
-  diff = open("diff.txt").read()
-  prompt = f"Review the following Java code diff. Comment on code quality, structure, security, and architectural decisions. Provide concise actionable feedback:\n\n{diff}"
-  
-  inputs = tokenizer(prompt, return_tensors="pt")
-  outputs = model.generate(**inputs, max_new_tokens=600)
-  review = tokenizer.decode(outputs[0], skip_special_tokens=True)
-  
-  open("ai-review.md", "w").write(review)
-  EOF
+          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+          git diff ${{ github.base_ref }}... > diff.txt
 
-- name: Upload AI Review
-  uses: actions/upload-artifact@v4
-  with:
-    name: ai-review
-    path: ai-review.md
+      - name: Run AI review (StarCoder2-3B – fits in RAM)
+        env:
+          HF_HUB_CACHE: /tmp/hf-cache
+        run: |
+          python - <<'PY'
+          from transformers import AutoTokenizer, AutoModelForCausalLM
+          import os, textwrap
+
+          model_id = "bigcode/starcoder2-3b"
+          tokenizer = AutoTokenizer.from_pretrained(model_id)
+          model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto", torch_dtype="auto")
+
+          diff = open("diff.txt").read()
+          if not diff.strip():
+              print("No changes to review.")
+              open("ai-review.md", "w").write("No code changes in this PR.")
+          else:
+              prompt = f"""You are an expert Java reviewer. Provide concise, actionable feedback on:
+              - Code quality & style
+              - Security
+              - Architecture
+              - Performance
+
+              ```diff
+              {diff}
