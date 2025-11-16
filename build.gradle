@@ -2,6 +2,11 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.7'
 	id 'io.spring.dependency-management' version '1.1.7'
+    id 'checkstyle'
+    id 'pmd'
+    id 'jacoco'
+    id("com.github.spotbugs") version "6.0.9"
+    id "org.sonarqube" version "7.0.1.6134"
 }
 
 group = 'com.file-sharing'
@@ -16,6 +21,69 @@ java {
 
 repositories {
 	mavenCentral()
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "usermanager-java"
+        property "sonar.projectName", "usermanager-java"
+    }
+}
+
+checkstyle {
+    toolVersion = "10.17.0"
+    configFile = file("config/checkstyle/checkstyle.xml")
+}
+
+tasks.withType<Checkstyle> {
+    isIgnoreFailures = false
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+pmd {
+    toolVersion = "7.7.0"
+    isConsoleOutput = true
+    ruleSets = listOf()
+    ruleSetFiles = files("config/pmd/pmd-ruleset.xml")
+}
+
+tasks.withType<Pmd> {
+    isIgnoreFailures = false
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+spotbugs {
+    toolVersion.set("4.8.3")
+    excludeFilter.set(file("config/spotbugs/spotbugs-exclude.xml"))
+}
+
+tasks.withType<com.github.spotbugs.snom.SpotBugsTask> {
+    reports.create("html") {
+        required.set(true)
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.test {
+    useJUnitPlatform()
+    finalizedBy("jacocoTestReport")
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
 }
 
 dependencies {

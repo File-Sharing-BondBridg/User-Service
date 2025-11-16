@@ -1,0 +1,48 @@
+name: AI Code Review
+
+on:
+  pull_request:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install torch transformers
+
+      - name: Generate Diff
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff origin/${{ github.base_ref }}... > diff.txt
+
+      - name: Run AI Review
+        run: |
+          python <<EOF
+  from transformers import AutoTokenizer, AutoModelForCausalLM
+  tokenizer = AutoTokenizer.from_pretrained("HuggingFaceH4/zephyr-7b-beta")
+  model = AutoModelForCausalLM.from_pretrained("HuggingFaceH4/zephyr-7b-beta")
+  
+  diff = open("diff.txt").read()
+  prompt = f"Review the following Java code diff. Comment on code quality, structure, security, and architectural decisions. Provide concise actionable feedback:\n\n{diff}"
+  
+  inputs = tokenizer(prompt, return_tensors="pt")
+  outputs = model.generate(**inputs, max_new_tokens=600)
+  review = tokenizer.decode(outputs[0], skip_special_tokens=True)
+  
+  open("ai-review.md", "w").write(review)
+  EOF
+
+- name: Upload AI Review
+  uses: actions/upload-artifact@v4
+  with:
+    name: ai-review
+    path: ai-review.md
