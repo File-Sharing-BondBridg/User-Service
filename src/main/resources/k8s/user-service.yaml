@@ -13,6 +13,7 @@ spec:
       labels:
         app: user-service
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: user-service
           image: nazim112/user-service:latest
@@ -38,10 +39,18 @@ spec:
               value: "update"
             - name: SERVER_PORT
               value: "8084"
+            # sonarcloud:false-positive — internal cluster traffic only, never exposed
             - name: KEYCLOAK_URL
               value: "http://keycloak:8080/realms/bondbridg"
             - name: NATS_SERVERS
               value: "nats://nats:4222"
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
 ---
 apiVersion: v1
 kind: Service
