@@ -1,35 +1,17 @@
 name: Deploy to Kubernetes
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Code Quality & Security", "GitGuardian Secret Scan"]   # ← exact names of your workflows
+    types:
+      - completed
     branches: [ main ]
 
-# Wait for both CI workflows to pass
 concurrency: production
 
 jobs:
-  wait-for-ci:
-    runs-on: ubuntu-latest
-    needs: []
-    steps:
-      - name: Wait for Code Quality
-        uses: leonsteinhaeuser/workflow-dispatch@v2
-        with:
-          workflow: quality.yml
-          ref: ${{ github.ref }}
-          wait-for-completion: true
-          timeout-minutes: 30
-
-      - name: Wait for GitGuardian
-        uses: leonsteinhaeuser/workflow-dispatch@v2
-        with:
-          workflow: gitguardian.yml
-          ref: ${{ github.ref }}
-          wait-for-completion: true
-          timeout-minutes: 15
-
   deploy:
-    needs: wait-for-ci
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,16 +33,8 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE=nazimaga112/user-service
-          docker build -t $IMAGE:latest .
+          IMAGE=nazim112/user-service
+          TAG=${{ github.sha }}
+          docker build -t $IMAGE:$TAG -t $IMAGE:latest .
+          docker push $IMAGE:$TAG
           docker push $IMAGE:latest
-
-      - name: Trigger ArgoCD Sync
-        env:
-          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
-          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
-        run: |
-          curl -sSL -X POST \
-            -H "Authorization: Bearer $ARGOCD_AUTH_TOKEN" \
-            "$ARGOCD_SERVER/api/v1/applications/user-service/sync" \
-            -d '{"prune": true, "selectiveSync": false}'
