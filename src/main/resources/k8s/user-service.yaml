@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: file-sharing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: nazim112/user-service:latest
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "staging"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-user.file-sharing.svc.cluster.local:5432/usermanager"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "fileuser"
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-user-secret
+                  key: db-password
+            - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+              value: "org.postgresql.Driver"
+            - name: SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT
+              value: "org.hibernate.dialect.PostgreSQLDialect"
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: "update"
+            - name: SERVER_PORT
+              value: "8084"
+            - name: KEYCLOAK_URL
+              value: "http://keycloak:8080/realms/bondbridg"
+            - name: NATS_SERVERS
+              value: "nats://nats:4222"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: file-sharing
+spec:
+  selector:
+    app: user-service
+  ports:
+    - port: 8084
+      targetPort: 8084
+  type: LoadBalancer

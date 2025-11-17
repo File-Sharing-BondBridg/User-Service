@@ -1,0 +1,66 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: [ main ]
+
+# Wait for both CI workflows to pass
+concurrency: production
+
+jobs:
+  wait-for-ci:
+    runs-on: ubuntu-latest
+    needs: []
+    steps:
+      - name: Wait for Code Quality
+        uses: leonsteinhaeuser/workflow-dispatch@v2
+        with:
+          workflow: quality.yml
+          ref: ${{ github.ref }}
+          wait-for-completion: true
+          timeout-minutes: 30
+
+      - name: Wait for GitGuardian
+        uses: leonsteinhaeuser/workflow-dispatch@v2
+        with:
+          workflow: gitguardian.yml
+          ref: ${{ github.ref }}
+          wait-for-completion: true
+          timeout-minutes: 15
+
+  deploy:
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: zulu
+
+      - name: Build JAR
+        run: ./gradlew bootJar -x test
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE=nazimaga112/user-service
+          docker build -t $IMAGE:latest .
+          docker push $IMAGE:latest
+
+      - name: Trigger ArgoCD Sync
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+        run: |
+          curl -sSL -X POST \
+            -H "Authorization: Bearer $ARGOCD_AUTH_TOKEN" \
+            "$ARGOCD_SERVER/api/v1/applications/user-service/sync" \
+            -d '{"prune": true, "selectiveSync": false}'

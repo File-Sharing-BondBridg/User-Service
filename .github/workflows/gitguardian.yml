@@ -1,6 +1,5 @@
 name: GitGuardian Secret Scan
 
-#new test
 on:
   push:
     branches: [ main ]
@@ -17,6 +16,6 @@ jobs:
           fetch-depth: 0
 
       - name: GitGuardian scan
-        uses: GitGuardian/ggshield-action@v1.27.0
+        uses: GitGuardian/ggshield-action@v1.45.0
         env:
           GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}

@@ -1,0 +1,8 @@
+CREATE DATABASE IF NOT EXISTS usermanager;
+
+CREATE TABLE IF NOT EXISTS users (
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255),
+    provider VARCHAR(255),
+    id VARCHAR(255),
+);
