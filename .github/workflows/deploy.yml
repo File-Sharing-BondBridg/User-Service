@@ -7,14 +7,20 @@ on:
       - completed
     branches: [ main ]
 
-concurrency: production
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    if: ${{ workflows == 'success' }}
+    if: >
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          contains(github.event.workflow_run.head_sha, github.sha) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
