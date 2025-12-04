@@ -66,6 +66,12 @@ spec:
             - name: SERVER_PORT
               value: "8084"
 
+          resources:
+            requests:
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+
           # ---- Java Agent Mount ----
           volumeMounts:
             - name: dd-java-agent
