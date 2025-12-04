@@ -19,7 +19,23 @@ spec:
           image: nazim112/user-service:latest
           ports:
             - containerPort: 8084
+
+          # ---- Datadog APM ENV ----
           env:
+            - name: DD_SERVICE
+              value: "user-service"
+            - name: DD_ENV
+              value: "staging"
+            - name: DD_VERSION
+              value: "1.0.0"
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DD_AGENT_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+
+            # ---- Postgres env ----
             - name: SPRING_PROFILES_ACTIVE
               value: "staging"
             - name: SPRING_DATASOURCE_URL
@@ -37,30 +53,34 @@ spec:
               value: "org.hibernate.dialect.PostgreSQLDialect"
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: "update"
-            - name: SERVER_PORT
-              value: "8084"
-            # sonarcloud:false-positive — internal cluster traffic only, never exposed
+
+            # ---- Keycloak env ----
             - name: KEYCLOAK_URL
               value: "http://keycloak:8080/realms/bondbridg"
+
+            # ---- NATS env ----
             - name: NATS_SERVERS
               value: "nats://nats:4222"
-          resources:
-            limits:
-              memory: "256Mi"
-              cpu: "250m"
-            requests:
-              memory: "128Mi"
-              cpu: "100m"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: user-service
-  namespace: file-sharing
-spec:
-  type: ClusterIP
-  selector:
-    app: user-service
-  ports:
-    - port: 80
-      targetPort: 8084
+
+            # ---- Other env ----
+            - name: SERVER_PORT
+              value: "8084"
+
+          # ---- Java Agent Mount ----
+          volumeMounts:
+            - name: dd-java-agent
+              mountPath: /opt/dd-java-agent.jar
+              subPath: dd-java-agent.jar
+
+          # ---- Start Java with Datadog agent ----
+          command: [ "java" ]
+          args:
+            [
+              "-javaagent:/opt/dd-java-agent.jar",
+              "-jar", "/app/app.jar"
+            ]
+
+      volumes:
+        - name: dd-java-agent
+          configMap:
+            name: datadog-java-agent
