@@ -72,12 +72,6 @@ spec:
             limits:
               memory: "512Mi"
 
-          # ---- Java Agent Mount ----
-          volumeMounts:
-            - name: dd-java-agent
-              mountPath: /opt/dd-java-agent.jar
-              subPath: dd-java-agent.jar
-
           # ---- Start Java with Datadog agent ----
           command: [ "java" ]
           args:
@@ -85,8 +79,3 @@ spec:
               "-javaagent:/opt/dd-java-agent.jar",
               "-jar", "/app/app.jar"
             ]
-
-      volumes:
-        - name: dd-java-agent
-          configMap:
-            name: datadog-java-agent
