@@ -71,11 +71,3 @@ spec:
               memory: "256Mi"
             limits:
               memory: "512Mi"
-
-          # ---- Start Java with Datadog agent ----
-          command: [ "java" ]
-          args:
-            [
-              "-javaagent:/opt/dd-java-agent.jar",
-              "-jar", "/app/app.jar"
-            ]
