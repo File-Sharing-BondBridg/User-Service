@@ -3,6 +3,7 @@ package com.file_sharing.user_service.controller;
 import com.file_sharing.user_service.model.User;
 import com.file_sharing.user_service.repository.UserRepository;
 import com.file_sharing.user_service.service.NatsEventPublisher;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,7 +11,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/")
 public class UserController {
 
   private final UserRepository repo;
@@ -25,15 +26,12 @@ public class UserController {
   public ResponseEntity<User> createOrGetUser(@RequestBody Map<String, String> data) {
     String email = data.get("email");
     String name = data.get("name");
-    // You probably have JWT here too — but if not, you can't set ID
 
     return ResponseEntity.ok(
         repo.findByEmail(email)
             .orElseGet(
                 () -> {
                   User user = new User(email, name, "keycloak");
-                  // You MUST have JWT to set ID → better remove this endpoint
-                  // or require JWT
                   throw new IllegalStateException("Cannot create user without JWT");
                 }));
   }
@@ -46,14 +44,25 @@ public class UserController {
   }
 
   @PostMapping("/sync")
-  public ResponseEntity<?> syncUser(@AuthenticationPrincipal Jwt jwt) {
-    String userId = jwt.getSubject(); // ← Keycloak UUID
-    String email = jwt.getClaim("email");
-    String name = jwt.getClaim("preferred_username");
+  public ResponseEntity<?> syncUser(
+                @AuthenticationPrincipal Jwt jwt
+//      HttpServletRequest request
+  ) {
+        String userId = jwt.getSubject();
+        String email = jwt.getClaim("email");
+        String name = jwt.getClaim("preferred_username");
 
-    if (email == null) {
-      return ResponseEntity.badRequest().body(Map.of("error", "Email missing in token"));
-    }
+        if (email == null) {
+          return ResponseEntity.badRequest().body(Map.of("error", "Email missing in token"));
+        }
+
+//    String userId = (String) request.getAttribute("user_id");
+//    String email = (String) request.getAttribute("email");
+//    String name = (String) request.getAttribute("username");
+//
+//    if (email == null) {
+//      return ResponseEntity.badRequest().body(Map.of("error", "Email missing"));
+//    }
 
     User user =
         repo.findByEmail(email)
