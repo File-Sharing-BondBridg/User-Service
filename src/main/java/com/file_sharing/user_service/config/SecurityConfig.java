@@ -1,6 +1,5 @@
 package com.file_sharing.user_service.config;
 
-import java.util.Arrays;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,16 +20,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/me", "/sync").authenticated()
-                        .anyRequest().permitAll()
-                )
-                .oauth2ResourceServer(oauth2 ->
-                        oauth2.jwt(jwt -> jwt.decoder(jwtDecoder()))
-                );
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers("/me", "/sync").authenticated()
+                    .anyRequest().permitAll()
+            )
+            .oauth2ResourceServer(oauth2 ->
+                    oauth2.jwt(jwt -> jwt.decoder(jwtDecoder()))
+            );
 
         return http.build();
     }

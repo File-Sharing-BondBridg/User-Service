@@ -1,9 +1,11 @@
 package com.file_sharing.user_service.controller;
 
 import com.file_sharing.user_service.model.User;
+import com.file_sharing.user_service.model.UserSyncedEvent;
 import com.file_sharing.user_service.repository.UserRepository;
 import com.file_sharing.user_service.service.NatsEventPublisher;
-import jakarta.servlet.http.HttpServletRequest;
+
+import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,40 +16,39 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/")
 public class UserController {
 
-  private final UserRepository repo;
-  private final NatsEventPublisher natsPublisher;
+    private final UserRepository repo;
+    private final NatsEventPublisher natsPublisher;
 
-  public UserController(UserRepository repo, NatsEventPublisher natsPublisher) {
-    this.repo = repo;
-    this.natsPublisher = natsPublisher;
-  }
+    public UserController(UserRepository repo, NatsEventPublisher natsPublisher) {
+        this.repo = repo;
+        this.natsPublisher = natsPublisher;
+    }
 
-  @PostMapping
-  public ResponseEntity<User> createOrGetUser(@RequestBody Map<String, String> data) {
-    String email = data.get("email");
-    String name = data.get("name");
+    @PostMapping
+    public ResponseEntity<User> createOrGetUser(@RequestBody Map<String, String> data) {
+        String email = data.get("email");
+        String name = data.get("name");
 
-    return ResponseEntity.ok(
-        repo.findByEmail(email)
-            .orElseGet(
-                () -> {
-                  User user = new User(email, name, "keycloak");
-                  throw new IllegalStateException("Cannot create user without JWT");
-                }));
-  }
+        return ResponseEntity.ok(
+            repo.findByEmail(email)
+                .orElseGet(
+                    () -> {
+                      User user = new User(email, name, "keycloak");
+                      throw new IllegalStateException("Cannot create user without JWT");
+                    }
+                )
+        );
+    }
 
-  @GetMapping("/me")
-  public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal Jwt jwt) {
-    String userId = jwt.getSubject();
-    String email = jwt.getClaim("email");
-    return ResponseEntity.ok(Map.of("id", userId, "email", email));
-  }
+    @GetMapping("/me")
+    public ResponseEntity<?> getUserInfo(@AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getSubject();
+        String email = jwt.getClaim("email");
+        return ResponseEntity.ok(Map.of("id", userId, "email", email));
+    }
 
-  @PostMapping("/sync")
-  public ResponseEntity<?> syncUser(
-                @AuthenticationPrincipal Jwt jwt
-//      HttpServletRequest request
-  ) {
+    @PostMapping("/sync")
+    public ResponseEntity<?> syncUser( @AuthenticationPrincipal Jwt jwt) {
         String userId = jwt.getSubject();
         String email = jwt.getClaim("email");
         String name = jwt.getClaim("preferred_username");
@@ -56,50 +57,53 @@ public class UserController {
           return ResponseEntity.badRequest().body(Map.of("error", "Email missing in token"));
         }
 
-//    String userId = (String) request.getAttribute("user_id");
-//    String email = (String) request.getAttribute("email");
-//    String name = (String) request.getAttribute("username");
-//
-//    if (email == null) {
-//      return ResponseEntity.badRequest().body(Map.of("error", "Email missing"));
-//    }
+        User user =
+            repo.findByEmail(email)
+                .orElseGet(
+                    () -> {
+                      User newUser = new User(email, name, "keycloak");
+                      newUser.setId(userId);
+                      return repo.save(newUser);
+                    });
 
-    User user =
-        repo.findByEmail(email)
-            .orElseGet(
-                () -> {
-                  User newUser = new User(email, name, "keycloak");
-                  newUser.setId(userId); // ← SET ID MANUALLY
-                  return repo.save(newUser);
-                });
+        // If user exists but id is missing (old data), fix it
+        if (user.getId() == null || !user.getId().equals(userId)) {
+          user.setId(userId);
+          user = repo.save(user);
+        }
 
-    // If user exists but id is missing (old data), fix it
-    if (user.getId() == null || !user.getId().equals(userId)) {
-      user.setId(userId);
-      user = repo.save(user);
+        UserSyncedEvent event =
+              new UserSyncedEvent(
+                      "UserSynced",
+                      user.getId(),
+                      user.getEmail(),
+                      Instant.now()
+              );
+
+        natsPublisher.publish("users.synced", event);
+
+        return ResponseEntity.ok(
+            Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "name", user.getName(),
+                "provider", user.getProvider()
+            )
+        );
     }
 
-    return ResponseEntity.ok(
-        Map.of(
-            "id", user.getId(),
-            "email", user.getEmail(),
-            "name", user.getName(),
-            "provider", user.getProvider()));
-  }
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(@AuthenticationPrincipal Jwt jwt) {
+        String userId = jwt.getSubject();
 
-  @DeleteMapping("/me")
-  public ResponseEntity<?> deleteMyAccount(@AuthenticationPrincipal Jwt jwt) {
-    String userId = jwt.getSubject(); // e.g. "7f010923-5f70-..."
+        if (!repo.existsById(userId)) {
+          return ResponseEntity.notFound().build();
+        }
 
-    // todo: first create a user that has a string id. Currently the IDs dont match
-    if (!repo.existsById(userId)) {
-      return ResponseEntity.notFound().build();
+        repo.deleteById(userId);
+
+        natsPublisher.publishUserDeleted(userId);
+
+        return ResponseEntity.ok(Map.of("message", "Account deleted successfully", "user_id", userId));
     }
-
-    repo.deleteById(userId); // ← Works with String ID
-
-    natsPublisher.publishUserDeleted(userId);
-
-    return ResponseEntity.ok(Map.of("message", "Account deleted successfully", "user_id", userId));
-  }
 }
