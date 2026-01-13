@@ -1,6 +1,8 @@
 package com.file_sharing.user_service.config;
 
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,6 +18,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 public class SecurityConfig {
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+    private String jwkSetUri;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -37,9 +41,7 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
         NimbusJwtDecoder decoder =
-                NimbusJwtDecoder.withJwkSetUri(
-                        "https://keycloak.bondbridg.com/realms/bondbridg/protocol/openid-connect/certs"
-                ).build();
+                NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
         OAuth2TokenValidator<Jwt> validator =
                 new DelegatingOAuth2TokenValidator<>(

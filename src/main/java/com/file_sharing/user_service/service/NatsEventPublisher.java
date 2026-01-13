@@ -15,23 +15,24 @@ import org.springframework.stereotype.Service;
 public class NatsEventPublisher {
 
     private final Connection nats;
-    private final ObjectMapper mapper = new ObjectMapper();
     private final JetStream jetStream;
+    private final ObjectMapper mapper;
 
-    public NatsEventPublisher(Connection nats) throws IOException {
+    public NatsEventPublisher(Connection nats, ObjectMapper mapper) throws IOException {
         this.nats = nats;
         this.jetStream = nats.jetStream();
+        this.mapper = mapper;
     }
 
     public void publishUserDeleted(String userId) {
-    Map<String, String> payload = Map.of("user_id", userId);
-    try {
-      String json = mapper.writeValueAsString(payload);
-      nats.publish("user.deleted", json.getBytes(StandardCharsets.UTF_8));
-      System.out.println("[NATS] Published user.deleted: " + userId);
-    } catch (JsonProcessingException e) {
-      System.err.println("[NATS] Failed to serialize user.deleted event: " + e.getMessage());
-    }
+        Map<String, String> payload = Map.of("user_id", userId);
+        try {
+            byte[] json = mapper.writeValueAsBytes(payload);
+            nats.publish("users.deleted", json);
+            System.out.println("[NATS] Published users.deleted: " + userId);
+        } catch (Exception e) {
+            System.err.println("[NATS] Failed to serialize users.deleted event: " + e.getMessage());
+        }
     }
 
     public void publish(String subject, Object event) {

@@ -3,6 +3,8 @@ package com.file_sharing.user_service.controller;
 import com.file_sharing.user_service.model.User;
 import com.file_sharing.user_service.model.UserSyncedEvent;
 import com.file_sharing.user_service.repository.UserRepository;
+import com.file_sharing.user_service.service.KeycloakAdminClient;
+import com.file_sharing.user_service.service.KeycloakTokenService;
 import com.file_sharing.user_service.service.NatsEventPublisher;
 
 import java.time.Instant;
@@ -18,10 +20,14 @@ public class UserController {
 
     private final UserRepository repo;
     private final NatsEventPublisher natsPublisher;
+    private final KeycloakAdminClient keycloakAdminClient;
+    private final KeycloakTokenService keycloakTokenService;
 
-    public UserController(UserRepository repo, NatsEventPublisher natsPublisher) {
+    public UserController(UserRepository repo, NatsEventPublisher natsPublisher, KeycloakAdminClient keycloakAdminClient, KeycloakTokenService keycloakTokenService) {
         this.repo = repo;
         this.natsPublisher = natsPublisher;
+        this.keycloakAdminClient = keycloakAdminClient;
+        this.keycloakTokenService = keycloakTokenService;
     }
 
     @PostMapping
@@ -101,8 +107,14 @@ public class UserController {
         }
 
         repo.deleteById(userId);
-
         natsPublisher.publishUserDeleted(userId);
+
+        try {
+            String adminToken = keycloakTokenService.getAdminToken();
+            keycloakAdminClient.deleteUser(userId, adminToken);
+        } catch (Exception e) {
+            System.err.println("Failed to delete user from Keycloak: " + e.getMessage());
+        }
 
         return ResponseEntity.ok(Map.of("message", "Account deleted successfully", "user_id", userId));
     }
