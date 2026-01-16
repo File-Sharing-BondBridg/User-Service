@@ -16,7 +16,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: user-service
-          image: nazim112/user-service:latest
+          image: nazim112/user-service:8724f7a5a7b1f037813c2c8e3e35a5b78b2c91c1
           ports:
             - containerPort: 8084
 
